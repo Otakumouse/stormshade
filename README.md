@@ -36,8 +36,6 @@ NOTE: You might experience having duplicated presets, just delete them by clicki
 
 ![image3](http://i.imgur.com/JxExYX9.jpg)
 
-**That's it!** Enjoy playing the game and use this a a base configuration if you want to make your own.
+**That's it!** Enjoy playing the game and use this as a base configuration if you want to make your own. Thanks for all the feedback and will update this repo once I have some solid improvements to add.
 
 ![image4](http://i.imgur.com/k0M2Jbj.jpg)
-
-Thanks for all the feedback and will update this repo once I have something major to add.
