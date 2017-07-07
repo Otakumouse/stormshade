@@ -9,7 +9,7 @@
 * **You don't need** to install **Reshade** for this to work.
 * **Reshade** is basically just a dll file (it generates the proper dll files when you use reshade's application). I understand some of the skepticism when it comes to dll files. Feel free to scan it for your peace of mind. If you're really worried that I might infect your machine, **just don't install it**.
 * This custom reshade build was **tested on DIRECTX11 client of the game ONLY**. Haven't tried it on DIRECTX9 yet.
-* I created this to improve your experience of the game. It the current settings doesn't suit your taste, you are free to tinker with the files/settings and **make it your own**. I really don't mind.
+* I created this to improve your experience of the game. If the current settings doesn't suit your taste, you are free to tinker with the files/settings and **make it your own**. I really don't mind.
 * I made sure the installation of this build will be as easy to implement as possible, still, read the instructions carefully just to be on the safe side.
 
 ## Caveats
