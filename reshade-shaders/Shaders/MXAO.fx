@@ -2,7 +2,7 @@
 // ReShade 3.0 effect file
 // visit facebook.com/MartyMcModding for news/updates
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Ambient Obscurance with Indirect Lighting "MXAO" 2.1.001 by Marty McFly
+// Ambient Obscurance with Indirect Lighting "MXAO" 2.1.015 by Marty McFly
 // CC BY-NC-ND 3.0 licensed.
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -27,7 +27,7 @@
 #endif
 
 #ifndef MXAO_TWO_LAYER
- #define MXAO_TWO_LAYER                 0       //[0 or 1]      Splits MXAO into two separate layers that allow for both large and fine AO.
+ #define MXAO_TWO_LAYER                 1       //[0 or 1]      Splits MXAO into two separate layers that allow for both large and fine AO.
 #endif
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -130,6 +130,13 @@ uniform float fMXAOFadeoutEnd <
 	ui_tooltip = "Distance where MXAO completely fades out. 0.0 = camera, 1.0 = sky. Must be greater than Fade Out Start.";
 > = 0.4;
 
+uniform float fMXAOSizeScale <
+	ui_type = "drag";
+        ui_label = "Size Scale";
+	ui_min = 0.50; ui_max = 1.00;
+        ui_tooltip = "Factor of MXAO resolution, lower values greatly reduce performance overhead but decrease quality.\n1.0 = MXAO is computed in original resolution\n0.5 = MXAO is computed in 1/2 width 1/2 height of original resolution\n...";
+> = 1.0;
+
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Textures, Samplers
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -227,22 +234,20 @@ float3 GetSmoothedNormals(float2 texcoord, float3 ScreenSpaceNormals, float3 Scr
    account greatly helps to reduce these problems. */
 void GetBlurWeight(in float4 tempKey, in float4 centerKey, in float surfacealignment, inout float weight)
 {
-	float depthdiff = abs(tempKey.w-centerKey.w);
-	float normaldiff = 1.0-saturate(dot(normalize(tempKey.xyz),normalize(centerKey.xyz)));
+        float depthdiff = abs(tempKey.w - centerKey.w);
+        float normaldiff = saturate(1.0 - dot(tempKey.xyz,centerKey.xyz));
 
-	float depthweight = saturate(rcp(fMXAOBlurSharpness*depthdiff*5.0*surfacealignment));
-	float normalweight = saturate(rcp(fMXAOBlurSharpness*normaldiff*10.0));
-
-	weight = min(normalweight,depthweight) * 2;
+        float biggestdiff = 1e-6 + fMXAOBlurSharpness * max(depthdiff*surfacealignment,normaldiff*2.0);
+        weight = saturate(0.2 / biggestdiff) * 2.0;
 }
 
 /* Fetches normal,depth and AO/IL data from the respective buffers.
    AO only: backbuffer rgb - normal, backbuffer alpha - AO.
    IL enabled: backbuffer rgb - IL, backbuffer alpha - AO. */
-void GetBlurKeyAndSample(in float2 texcoord, in sampler inputsampler, inout float4 tempsample, inout float4 key)
+void GetBlurKeyAndSample(in float2 texcoord, in float inputscale, in sampler inputsampler, inout float4 tempsample, inout float4 key)
 {
         float4 lodcoord = float4(texcoord.xy,0,0);
-        tempsample = tex2Dlod(inputsampler,lodcoord);
+        tempsample = tex2Dlod(inputsampler,lodcoord * inputscale);
         #if(MXAO_ENABLE_IL != 0)
                 key = float4(tex2Dlod(SamplerSurfaceNormal,lodcoord).xyz*2-1, tex2Dlod(SamplerDistance,lodcoord).x);
         #else
@@ -253,14 +258,15 @@ void GetBlurKeyAndSample(in float2 texcoord, in sampler inputsampler, inout floa
 /* Bilateral blur, exploiting bilinear filter
    for sample count reduction by sampling 2 texels
    at once.*/
-float4 GetBlurredAO( float2 texcoord, sampler inputsampler, float2 axisscaled, int nSteps)
+float4 GetBlurredAO( float2 texcoord, sampler inputsampler, float2 axisscaled, int nSteps, float inputscale)
 {
+
 	float4 tempsample;
-	float4 centerkey   , tempkey;
+	float4 centerkey, tempkey;
 	float  centerweight = 1.0, tempweight;
 	float4 blurcoord = 0.0;
 
-        GetBlurKeyAndSample(texcoord.xy,inputsampler,tempsample,centerkey);
+        GetBlurKeyAndSample(texcoord.xy,inputscale,inputsampler,tempsample,centerkey);
 	float surfacealignment = saturate(-dot(centerkey.xyz,normalize(float3(texcoord.xy*2.0-1.0,1.0)*centerkey.w)));
 
         #if(MXAO_ENABLE_IL != 0)
@@ -274,7 +280,7 @@ float4 GetBlurredAO( float2 texcoord, sampler inputsampler, float2 axisscaled, i
         {
                 float currentLinearstep = iStep * 2.0 - 0.5;
 
-                GetBlurKeyAndSample(texcoord.xy + currentLinearstep * axisscaled, inputsampler, tempsample, tempkey);
+                GetBlurKeyAndSample(texcoord.xy + currentLinearstep * axisscaled, inputscale, inputsampler, tempsample, tempkey);
                 GetBlurWeight(tempkey, centerkey, surfacealignment, tempweight);
 
                 #if(MXAO_ENABLE_IL != 0)
@@ -284,7 +290,7 @@ float4 GetBlurredAO( float2 texcoord, sampler inputsampler, float2 axisscaled, i
                 #endif
                 centerweight  += tempweight;
 
-                GetBlurKeyAndSample(texcoord.xy - currentLinearstep * axisscaled, inputsampler, tempsample, tempkey);
+                GetBlurKeyAndSample(texcoord.xy - currentLinearstep * axisscaled, inputscale, inputsampler, tempsample, tempkey);
                 GetBlurWeight(tempkey, centerkey, surfacealignment, tempweight);
 
                 #if(MXAO_ENABLE_IL != 0)
@@ -356,11 +362,11 @@ float4 GetMXAO(float2 POS,
 	float4 AO_IL = 0.0;
 	float2 sampleUV, Dir;
 
-#if(MXAO_TWO_LAYER != 0)
-        float enhanceDetails = (POS.x + POS.y) % 2;
-        radius *= lerp(1.0,fMXAOSampleRadiusSecondary,enhanceDetails);
-        falloffFactor *= lerp(1.0,1.0/(fMXAOSampleRadiusSecondary*fMXAOSampleRadiusSecondary),enhanceDetails);
-#endif
+        #if(MXAO_TWO_LAYER != 0)
+                float enhanceDetails = (POS.x + POS.y) % 2;
+                radius *= lerp(1.0,fMXAOSampleRadiusSecondary,enhanceDetails);
+                falloffFactor *= lerp(1.0,1.0/(fMXAOSampleRadiusSecondary*fMXAOSampleRadiusSecondary),enhanceDetails);
+        #endif
 
         sincos(6.28318548*sampleJitter, Dir.y, Dir.x);
         Dir *= radius;
@@ -414,7 +420,7 @@ void PS_InputBufferSetup(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, 
 	color 		= tex2D(ReShade::BackBuffer, texcoord.xy);
 	depth 		= GetLinearDepth(texcoord.xy)*RESHADE_DEPTH_LINEARIZATION_FAR_PLANE;
 	normal.xyz 	= GetNormalFromDepth(texcoord.xy).xyz * 0.5 + 0.5;
-	normal.w	= GetBayerFromCoordLevel(vpos.xy,4);
+	normal.w	= 0; //GetBayerFromCoordLevel(vpos.xy,4);
 }
 
 /* Prepass to create stencil buffer that disables AO calculation for pixels
@@ -423,13 +429,22 @@ void PS_InputBufferSetup(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, 
    which then affects the mipmaps of those buffers and causes artifacts.*/
 void PS_StencilSetup(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 {
-	if(GetLinearDepth(texcoord.xy) >= fMXAOFadeoutEnd) discard;
+        texcoord.xy /= fMXAOSizeScale;
+
+	if(    GetLinearDepth(texcoord.xy) >= fMXAOFadeoutEnd
+            || 0.25 * fMXAOSampleRadius / (tex2D(SamplerDistance,texcoord.xy).x + 2.0) * BUFFER_HEIGHT < 1.0
+            || texcoord.x > 1.0
+            || texcoord.y > 1.0) discard;
+
         color = 1.0;
 }
 
 void PS_AmbientObscurance(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 res : SV_Target0)
 {
+        texcoord.xy /= fMXAOSizeScale;
+
 	float4 normalSample = tex2D(SamplerSurfaceNormal, texcoord.xy);
+        normalSample.w = GetBayerFromCoordLevel(floor(vpos.xy),4);
 
 	float3 ScreenSpaceNormals = normalSample.xyz * 2.0 - 1.0;
 	float3 ScreenSpacePosition = GetPositionLOD(texcoord.xy, 0);
@@ -468,7 +483,7 @@ void PS_AmbientObscurance(float4 vpos : SV_Position, float2 texcoord : TEXCOORD,
    in 1.5 .. 3.5 ... 5.5 pixel offsets.*/
 void PS_BlurX(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 res : SV_Target0)
 {
-	res = GetBlurredAO(texcoord.xy, ReShade::BackBuffer, float2(ReShade::PixelSize.x,0.0), fMXAOBlurSteps);
+        res = GetBlurredAO(texcoord.xy, ReShade::BackBuffer, float2(ReShade::PixelSize.x,0.0), fMXAOBlurSteps, fMXAOSizeScale);
 }
 
 /* Second box blur pass and AO/IL combine. The given formula
@@ -477,7 +492,7 @@ void PS_BlurX(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 
    implementations.*/
 void PS_BlurYandCombine(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 res : SV_Target0)
 {
-        float4 MXAO = GetBlurredAO(texcoord.xy, ReShade::BackBuffer, float2(0.0,ReShade::PixelSize.y), fMXAOBlurSteps);
+        float4 MXAO = GetBlurredAO(texcoord.xy, ReShade::BackBuffer, float2(0.0,ReShade::PixelSize.y), fMXAOBlurSteps, 1.0);
 
         #if(MXAO_ENABLE_IL == 0)
                 MXAO.rgb = 0;
@@ -493,7 +508,7 @@ void PS_BlurYandCombine(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, o
 
 	MXAO    = (bMXAODebugViewEnable) ? MXAO : lerp(MXAO, 0.0, pow(dot(color.rgb,0.333),2.0));
 
-	MXAO.w    = lerp(MXAO.w, 0.0,smoothstep(fMXAOFadeoutStart, fMXAOFadeoutEnd, scenedepth));
+        MXAO.w    = lerp(MXAO.w, 0.0,smoothstep(fMXAOFadeoutStart, fMXAOFadeoutEnd, scenedepth));
 	MXAO.xyz  = lerp(MXAO.xyz,0.0,smoothstep(fMXAOFadeoutStart*0.5, fMXAOFadeoutEnd*0.5, scenedepth));
 
 	float3 GI = max(0.0,1.0 - MXAO.www + MXAO.xyz);
@@ -546,12 +561,12 @@ technique MXAO
 	{
 		VertexShader = PostProcessVS;
 		PixelShader  = PS_BlurX;
-		/*Render Target is Backbuffer*/
+                /*Render Target is Backbuffer*/
 	}
 	pass
 	{
 		VertexShader = PostProcessVS;
 		PixelShader  = PS_BlurYandCombine;
-		/*Render Target is Backbuffer*/
+                /*Render Target is Backbuffer*/
 	}
 }
