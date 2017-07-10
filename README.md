@@ -10,6 +10,7 @@
 * **Reshade** is basically just a dll file (it generates the proper dll files when you use reshade's application). I understand some of the skepticism when it comes to dll files. Feel free to scan it for your peace of mind. If you're really worried that I might infect your machine, **just don't install it**.
 * This custom reshade build was **tested on DIRECTX11 client of the game ONLY**. Haven't tried it on DIRECTX9 yet.
 * I created this to improve your experience of the game. If the current settings doesn't suit your taste, you are free to tinker with the files/settings and **make it your own**. I really don't mind.
+* Make sure to use the correct preset based on your screen resolution.
 * I made sure the installation of this build will be as easy to implement as possible, still, read the instructions carefully just to be on the safe side.
 
 ## Caveats
@@ -24,6 +25,10 @@ Reshade applies all shader effects on top of your game so ambient occlusion effe
 * Download this repo as **zip**.
 * Extract or drag all the contents of this zip file inside your FF14 game directory: Your Installation Directory\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\.
 * Done. **Run  the game**.
+
+# Tips/Troubleshooting
+* If text appear distorted or making you feel dizzy, you can turn that off by hitting SHIFT+F2, look for **CA** on the list of effects and toggle it off.
+* If you are not a fan of film grain, you can also reduce it's intensity or turn it off by using the same steps above. Look for the **Film Grain** effect on the list.
 
 # Shader Setup
 I suggest login in inside the game first.Once you have all files in place. Hit **SHIFT + F2** to open reshade's in-game UI.
