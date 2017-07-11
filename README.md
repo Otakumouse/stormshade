@@ -12,7 +12,7 @@
 * I created this to improve your experience of the game. If the current settings doesn't suit your taste, you are free to tinker with the files/settings and **make it your own**. I really don't mind.
 * Make sure to use the correct preset based on your screen resolution **(1080, 1440, 4k .ini files)**.
 * I made sure the installation of this build will be as easy to implement as possible, still, read the instructions carefully just to be on the safe side.
-* **DO NOT** overwrite the default shaders included in this repo with the ones found in vanilla reshade. These are modified shaders from source which gives reshade its looks.
+* **DO NOT** overwrite the default shaders included in this repo with the ones found in vanilla reshade. These are modified shaders from source which gives Stormshade its looks.
 
 ## Caveats
 There's only one issue same with all other shader builds out there that utilizes ambient occlusion. Unfortunately, we can't do anything about it. I still did a couple of adjustments to make this issue as subtle as possible.
