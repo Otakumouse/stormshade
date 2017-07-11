@@ -28,7 +28,7 @@ Reshade applies all shader effects on top of your game so ambient occlusion effe
 * Done. **Run  the game**.
 
 # Tips / Troubleshooting
-* If text appear distorted or making you feel dizzy, you can turn that off by hitting SHIFT+F2, look for **CA** on the list of effects and toggle it off.
+* If text appear distorted or making you feel dizzy, press SHIFT+F2, look for **CA** on the list of effects and toggle it off.
 * If you are not a fan of film grain, you can also reduce it's intensity or turn it off by using the same steps above. Look for the **Film Grain** effect on the list.
 
 # Shader Setup
