@@ -46,3 +46,8 @@ NOTE: You might experience having duplicated presets, just delete them by clicki
 **That's it!** Enjoy playing the game and use this as a base configuration if you want to make your own. Thanks for all the feedback and will update this repo once I have some solid improvements to add.
 
 ![image4](http://i.imgur.com/k0M2Jbj.jpg)
+
+# Optimization Tips (Squeeze those FPSes!!!)
+* Turning off in-game HBAO+ will have a huge performance boost in your FPS. FF14's in-game HBAO+ is a taxing feature specially in "quality" mode.
+* DO NOT USE **Fine Sharpen** in sharpening your scene if you don't have extra GPU horsepower. Use **Luma Sharpen** instead since it's much faster.
+* One of the heavy hitters here is **MXAO** (or what they call HBAO+ on steroids). Try adjusting the "sample count" in the settings (SHIFT + F2) to find the perfect balance between performance/appearance.
