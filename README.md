@@ -27,11 +27,6 @@ Reshade applies all shader effects on top of your game so ambient occlusion effe
 * Extract or drag all the contents of this zip file inside your FF14 game directory: Your Installation Directory\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\.
 * Done. **Run  the game**.
 
-# Tips / Troubleshooting
-* If text appear distorted or making you feel dizzy, press SHIFT+F2, look for **CA** on the list of effects and toggle it off.
-* If you are not a fan of film grain, you can also reduce it's intensity or turn it off by using the same steps above. Look for the **Film Grain** effect on the list.
-* If you notice the "Ambient Occlusion" bleeding underwater. Go to **SYSTEM CONFIG** > **GRAPHICS SETTINGS** and look for **WATER REFRACTION**. Turn that off (It doesn't add major effects underwater anyway :P)
-
 # Shader Setup
 I suggest login in inside the game first.Once you have all files in place. Hit **SHIFT + F2** to open reshade's in-game UI.
 
@@ -46,6 +41,11 @@ NOTE: You might experience having duplicated presets, just delete them by clicki
 **That's it!** Enjoy playing the game and use this as a base configuration if you want to make your own. Thanks for all the feedback and will update this repo once I have some solid improvements to add.
 
 ![image4](http://i.imgur.com/k0M2Jbj.jpg)
+
+# Tips / Troubleshooting
+* If text appear distorted or making you feel dizzy, press SHIFT+F2, look for **CA** on the list of effects and toggle it off.
+* If you are not a fan of film grain, you can also reduce it's intensity or turn it off by using the same steps above. Look for the **Film Grain** effect on the list.
+* If you notice the "Ambient Occlusion" bleeding underwater. Go to **SYSTEM CONFIG** > **GRAPHICS SETTINGS** and look for **WATER REFRACTION**. Turn that off (It doesn't add major effects underwater anyway :P)
 
 # Optimization Tips (Squeeze those FPSes!!!)
 * Turning off in-game HBAO+ will have a huge performance boost in your FPS. FF14's in-game HBAO+ is a taxing feature specially in "quality" mode.
