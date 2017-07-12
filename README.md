@@ -30,6 +30,7 @@ Reshade applies all shader effects on top of your game so ambient occlusion effe
 # Tips / Troubleshooting
 * If text appear distorted or making you feel dizzy, press SHIFT+F2, look for **CA** on the list of effects and toggle it off.
 * If you are not a fan of film grain, you can also reduce it's intensity or turn it off by using the same steps above. Look for the **Film Grain** effect on the list.
+* If you notice the "Ambient Occlusion" bleeding underwater. Go to **SYSTEM CONFIG** > **GRAPHICS SETTINGS** and look for **WATER REFRACTION**. Turn that off (It doesn't add major effects underwater anyway :P)
 
 # Shader Setup
 I suggest login in inside the game first.Once you have all files in place. Hit **SHIFT + F2** to open reshade's in-game UI.
