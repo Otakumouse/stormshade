@@ -36,7 +36,7 @@
 
 uniform float fMXAOAmbientOcclusionAmount <
 	ui_type = "drag";
-	ui_min = 0.00; ui_max = 3.00;
+	ui_min = 0.00; ui_max = 10.00;
         ui_label = "Ambient Occlusion Amount";
 	ui_tooltip = "Intensity of AO effect. Can cause pitch black clipping if set too high.";
 > = 2.00;
@@ -132,9 +132,9 @@ uniform float fMXAOFadeoutEnd <
 
 uniform float fMXAOSizeScale <
 	ui_type = "drag";
-        ui_label = "Size Scale";
+        ui_label = "AO Resolution";
 	ui_min = 0.50; ui_max = 1.00;
-        ui_tooltip = "Factor of MXAO resolution, lower values greatly reduce performance overhead but decrease quality.\n1.0 = MXAO is computed in original resolution\n0.5 = MXAO is computed in 1/2 width 1/2 height of original resolution\n...";
+        ui_tooltip = "Adjust resolution of AO. A value of 1 means AO will be rendered at full resolution.\nA value of 0.5 means AO will be rendered at half resolution\n(Feel free to experiment based on your screen res).";
 > = 1.0;
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
