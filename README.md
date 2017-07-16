@@ -12,6 +12,7 @@
 * I created this to improve your experience of the game. If the current settings doesn't suit your taste, you are free to tinker with the files/settings and **make it your own**. I really don't mind.
 * Make sure to use the correct preset based on your screen resolution **(1080, 1440, 4k .ini files)**.
 * I made sure the installation of this build will be as easy to implement as possible, still, read the instructions carefully just to be on the safe side.
+* **DO NOT** overwrite the default shaders included in this repo with the ones found in vanilla reshade. These are modified shaders from source which gives Stormshade its looks.
 
 ## Caveats
 There's only one issue same with all other shader builds out there that utilizes ambient occlusion. Unfortunately, we can't do anything about it. I still did a couple of adjustments to make this issue as subtle as possible.
@@ -25,10 +26,6 @@ Reshade applies all shader effects on top of your game so ambient occlusion effe
 * Download this repo as **zip**.
 * Extract or drag all the contents of this zip file inside your FF14 game directory: Your Installation Directory\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\.
 * Done. **Run  the game**.
-
-# Tips / Troubleshooting
-* If text appear distorted or making you feel dizzy, you can turn that off by hitting SHIFT+F2, look for **CA** on the list of effects and toggle it off.
-* If you are not a fan of film grain, you can also reduce it's intensity or turn it off by using the same steps above. Look for the **Film Grain** effect on the list.
 
 # Shader Setup
 I suggest login in inside the game first.Once you have all files in place. Hit **SHIFT + F2** to open reshade's in-game UI.
@@ -44,3 +41,15 @@ NOTE: You might experience having duplicated presets, just delete them by clicki
 **That's it!** Enjoy playing the game and use this as a base configuration if you want to make your own. Thanks for all the feedback and will update this repo once I have some solid improvements to add.
 
 ![image4](http://i.imgur.com/k0M2Jbj.jpg)
+
+# Tips / Troubleshooting
+* If text appear distorted or making you feel dizzy, press SHIFT+F2, look for **CA** on the list of effects and toggle it off.
+* If you are not a fan of film grain, you can also reduce it's intensity or turn it off by using the same steps above. Look for the **Film Grain** effect on the list.
+* If you notice the "Ambient Occlusion" bleeding underwater. Go to **SYSTEM CONFIG** > **GRAPHICS SETTINGS** and look for **WATER REFRACTION**. Turn that off (It doesn't add major effects underwater anyway :P)
+* If your settings are not being saved whenever you restart the game. Make sure your FF14 game directory has the proper permissions setup. To check this, right click on your game folder, select **SECURITY** tab and click **EDIT** to update folder permissions.
+* If you have the STEAM ver of the game and it doesn't work out of the box, try renaming all **dxgi** filename references to **d3d11**. Also make sure the **Stormshade Files** are together in the same directory as the game's executables.
+
+# Optimization Tips (Squeeze those FPSes!!!)
+* Turning off in-game HBAO+ will have a huge performance boost in your FPS. FF14's in-game HBAO+ is a taxing feature specially in "quality" mode.
+* DO NOT USE **Fine Sharpen** in sharpening your scene if you don't have extra GPU horsepower. Use **Luma Sharpen** instead since it's much faster.
+* One of the heavy hitters here is **MXAO** (or what they call HBAO+ on steroids). Try adjusting the "sample count" in the settings (SHIFT + F2) to find the perfect balance between performance/appearance.
