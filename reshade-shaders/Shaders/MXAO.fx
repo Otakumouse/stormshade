@@ -2,7 +2,7 @@
 // ReShade 3.0 effect file
 // visit facebook.com/MartyMcModding for news/updates
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Ambient Obscurance with Indirect Lighting "MXAO" 2.1.015 by Marty McFly
+// Ambient Obscurance with Indirect Lighting "MXAO" 3.4.3 by Marty McFly
 // CC BY-NC-ND 3.0 licensed.
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -11,7 +11,7 @@
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifndef MXAO_MIPLEVEL_AO
-#define MXAO_MIPLEVEL_AO		0	//[0 to 2]      Miplevel of AO texture. 0 = fullscreen, 1 = 1/2 screen width/height, 2 = 1/4 screen width/height and so forth. Best results: IL MipLevel = AO MipLevel + 2
+ #define MXAO_MIPLEVEL_AO		0	//[0 to 2]      Miplevel of AO texture. 0 = fullscreen, 1 = 1/2 screen width/height, 2 = 1/4 screen width/height and so forth. Best results: IL MipLevel = AO MipLevel + 2
 #endif
 
 #ifndef MXAO_MIPLEVEL_IL
@@ -19,123 +19,126 @@
 #endif
 
 #ifndef MXAO_ENABLE_IL
-#define MXAO_ENABLE_IL			0	//[0 or 1]	Enables Indirect Lighting calculation. Will cause a major fps hit.
+ #define MXAO_ENABLE_IL			0	//[0 or 1]	Enables Indirect Lighting calculation. Will cause a major fps hit.
 #endif
 
-#ifndef MXAO_ENABLE_BACKFACE
-#define MXAO_ENABLE_BACKFACE		1	//[0 or 1]	Enables back face check so surfaces facing away from the source position don't cast light. Will cause a major fps hit.
+#ifndef MXAO_SMOOTHNORMALS
+ #define MXAO_SMOOTHNORMALS             0       //[0 or 1]      This feature makes low poly surfaces smoother, especially useful on older games.
 #endif
 
 #ifndef MXAO_TWO_LAYER
- #define MXAO_TWO_LAYER                 1       //[0 or 1]      Splits MXAO into two separate layers that allow for both large and fine AO.
+ #define MXAO_TWO_LAYER                 0       //[0 or 1]      Splits MXAO into two separate layers that allow for both large and fine AO.
+#endif
+
+#ifndef MXAO_ENABLE_TSS
+ #define MXAO_ENABLE_TSS                0       //[0 or 1]      Combines the current frame AO with older frames to improve quality a LOT, at the expense of some ghosting.
 #endif
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // UI variables
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-uniform float fMXAOAmbientOcclusionAmount <
-	ui_type = "drag";
-	ui_min = 0.00; ui_max = 10.00;
-        ui_label = "Ambient Occlusion Amount";
-	ui_tooltip = "Intensity of AO effect. Can cause pitch black clipping if set too high.";
-> = 2.00;
+uniform int MXAO_GLOBAL_SAMPLE_QUALITY_PRESET <
+	ui_type = "combo";
+        ui_label = "Sample Quality";
+	ui_items = "Very Low\0Low\0Medium\0High\0Very High\0Ultra\0Maximum\0";
+	ui_tooltip = "Global quality control, main performance knob. Higher radii might require higher quality.";
+> = 1;
 
-uniform float fMXAOIndirectLightingAmount <
+uniform float MXAO_SAMPLE_RADIUS <
 	ui_type = "drag";
-	ui_min = 0.00; ui_max = 12.00;
-        ui_label = "Indirect Lighting Amount";
-	ui_tooltip = "Intensity of IL effect. Can cause overexposured white spots if set too high.\nEnable SSIL in preprocessor section.";
-> = 4.00;
-
-uniform float fMXAOIndirectLightingSaturation <
-	ui_type = "drag";
-	ui_min = 0.00; ui_max = 3.00;
-        ui_label = "Indirect Lighting Saturation";
-	ui_tooltip = "Controls color saturation of IL effect.\nEnable SSIL in preprocessor section.";
-> = 1.00;
-
-uniform float fMXAOSampleRadius <
-	ui_type = "drag";
-	ui_min = 1.00; ui_max = 20.00;
+	ui_min = 1.0; ui_max = 20.0;
         ui_label = "Sample Radius";
 	ui_tooltip = "Sample radius of MXAO, higher means more large-scale occlusion with less fine-scale details.";
-> = 2.50;
+> = 2.5;
 
-uniform int iMXAOSampleCount <
-	ui_type = "drag";
-	ui_min = 8; ui_max = 255;
-        ui_label = "Sample Count";
-	ui_tooltip = "Amount of MXAO samples. Higher means more accurate and less noisy AO at the cost of performance.";
-> = 24;
-
-#if (MXAO_TWO_LAYER != 0)
-           uniform float fMXAOSampleRadiusSecondary <
-           	ui_type = "drag";
-           	ui_min = 0.1; ui_max = 1.00;
-                   ui_label = "Fine AO scale";
-           	ui_tooltip = "Multiplier of Sample Radius for fine geometry. A setting of 0.5 scans the geometry at half the radius of the main AO.";
-           > = 0.2;
-
-           uniform float2 fMXAOMultFineCoarse <
-             ui_type = "drag";
-             ui_min = 0.00; ui_max = 1.00;
-                   ui_label = "Coarse / Fine AO intensity";
-             ui_tooltip = "Intensity of large and small scale AO / IL.";
-           > = 1.0;
-#endif
-
-uniform float fMXAONormalBias <
+uniform float MXAO_SAMPLE_NORMAL_BIAS <
 	ui_type = "drag";
 	ui_min = 0.0; ui_max = 0.8;
         ui_label = "Normal Bias";
 	ui_tooltip = "Occlusion Cone bias to reduce self-occlusion of surfaces that have a low angle to each other.";
 > = 0.2;
 
-uniform bool bMXAOSmoothNormalsEnable <
-        ui_label = "Enable Smoothed Normals";
-	ui_tooltip = "Enable smoothed normals. WIP.";
-> = false;
-
-uniform float fMXAOBlurSharpness <
+uniform float MXAO_GLOBAL_RENDER_SCALE <
 	ui_type = "drag";
-	ui_min = 0.00; ui_max = 5.00;
-        ui_label = "Blur Sharpness";
-	ui_tooltip = "MXAO sharpness, higher means AO blurs less across geometry edges but may leave some noisy areas.";
+        ui_label = "Render Size Scale";
+	ui_min = 0.50; ui_max = 1.00;
+        ui_tooltip = "Factor of MXAO resolution, lower values greatly reduce performance overhead but decrease quality.\n1.0 = MXAO is computed in original resolution\n0.5 = MXAO is computed in 1/2 width 1/2 height of original resolution\n...";
+> = 1.0;
+
+uniform float MXAO_SSAO_AMOUNT <
+	ui_type = "drag";
+	ui_min = 0.00; ui_max = 3.00;
+        ui_label = "Ambient Occlusion Amount";
+	ui_tooltip = "Intensity of AO effect. Can cause pitch black clipping if set too high.";
 > = 2.00;
 
-uniform int fMXAOBlurSteps <
-	ui_type = "drag";
-	ui_min = 0; ui_max = 5;
-        ui_label = "Blur Steps";
-	ui_tooltip = "Offset count for MXAO bilateral blur filter. Higher means smoother but also blurrier AO.";
-> = 2;
+#if(MXAO_ENABLE_IL != 0)
+        uniform float MXAO_SSIL_AMOUNT <
+        	ui_type = "drag";
+        	ui_min = 0.00; ui_max = 12.00;
+                ui_label = "Indirect Lighting Amount";
+        	ui_tooltip = "Intensity of IL effect. Can cause overexposured white spots if set too high.";
+        > = 4.00;
 
-uniform bool bMXAODebugViewEnable <
+        uniform float MXAO_SSIL_SATURATION <
+        	ui_type = "drag";
+        	ui_min = 0.00; ui_max = 3.00;
+                ui_label = "Indirect Lighting Saturation";
+        	ui_tooltip = "Controls color saturation of IL effect.";
+        > = 1.00;
+#endif
+
+#if (MXAO_TWO_LAYER != 0)
+        uniform float MXAO_SAMPLE_RADIUS_SECONDARY <
+           	ui_type = "drag";
+           	ui_min = 0.1; ui_max = 1.00;
+                   ui_label = "Fine AO Scale";
+           	ui_tooltip = "Multiplier of Sample Radius for fine geometry. A setting of 0.5 scans the geometry at half the radius of the main AO.";
+        > = 0.2;
+
+        uniform float MXAO_AMOUNT_FINE <
+             ui_type = "drag";
+             ui_min = 0.00; ui_max = 1.00;
+             ui_label = "Fine AO intensity multiplier";
+             ui_tooltip = "Intensity of small scale AO / IL.";
+        > = 1.0;
+
+        uniform float MXAO_AMOUNT_COARSE <
+             ui_type = "drag";
+             ui_min = 0.00; ui_max = 1.00;
+             ui_label = "Coarse AO intensity multiplier";
+             ui_tooltip = "Intensity of large scale AO / IL.";
+        > = 1.0;
+#endif
+
+uniform int MXAO_DEBUG_VIEW_ENABLE <
+	ui_type = "combo";
         ui_label = "Enable Debug View";
-	ui_tooltip = "Enables raw MXAO output for debugging and tuning purposes.";
-> = false;
+	ui_items = "None\0AO/IL channel\0Culling Mask\0";
+	ui_tooltip = "Different debug outputs";
+> = 0;
 
-uniform float fMXAOFadeoutStart <
+uniform int MXAO_BLEND_TYPE <
+	ui_type = "drag";
+	ui_min = 0; ui_max = 2;
+        ui_label = "Blending Mode";
+	ui_tooltip = "Different blending modes for merging AO/IL with original color.\0Blending mode 0 matches formula of MXAO 2.0 and older.";
+> = 0;
+
+uniform float MXAO_FADE_DEPTH_START <
 	ui_type = "drag";
         ui_label = "Fade Out Start";
 	ui_min = 0.00; ui_max = 1.00;
 	ui_tooltip = "Distance where MXAO starts to fade out. 0.0 = camera, 1.0 = sky. Must be less than Fade Out End.";
 > = 0.2;
 
-uniform float fMXAOFadeoutEnd <
+uniform float MXAO_FADE_DEPTH_END <
 	ui_type = "drag";
         ui_label = "Fade Out End";
 	ui_min = 0.00; ui_max = 1.00;
 	ui_tooltip = "Distance where MXAO completely fades out. 0.0 = camera, 1.0 = sky. Must be greater than Fade Out Start.";
 > = 0.4;
-
-uniform float fMXAOSizeScale <
-	ui_type = "drag";
-        ui_label = "AO Resolution";
-	ui_min = 0.50; ui_max = 1.00;
-        ui_tooltip = "Adjust resolution of AO. A value of 1 means AO will be rendered at full resolution.\nA value of 0.5 means AO will be rendered at half resolution\n(Feel free to experiment based on your screen res).";
-> = 1.0;
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Textures, Samplers
@@ -143,383 +146,436 @@ uniform float fMXAOSizeScale <
 
 #include "ReShade.fxh"
 
-texture2D texColorBypass 	{ Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = RGBA8; MipLevels = 5+MXAO_MIPLEVEL_IL;};
-texture2D texDistance 		{ Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = R16F;  MipLevels = 5+MXAO_MIPLEVEL_AO;};
-texture2D texSurfaceNormal	{ Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = RGBA8; MipLevels = 5+MXAO_MIPLEVEL_IL;};
+uniform float MXAO_FRAME_COUNT < source = "framecount"; >;
+uniform float MXAO_FRAME_TIME  < source = "frametime"; >;
 
-sampler2D SamplerColorBypass	{ Texture = texColorBypass;	};
-sampler2D SamplerDistance	{ Texture = texDistance;	};
-sampler2D SamplerSurfaceNormal	{ Texture = texSurfaceNormal;	};
+#if(MXAO_ENABLE_TSS != 0)
+texture2D texSSAOTSS 	        { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = RGBA8; };
+sampler2D SamplerSSAOTSS	{ Texture = texSSAOTSS;	        };
+#endif
+
+texture2D MXAO_ColorTex 	{ Width = BUFFER_WIDTH;   Height = BUFFER_HEIGHT;   Format = RGBA8; MipLevels = 3+MXAO_MIPLEVEL_IL;};
+texture2D MXAO_DepthTex 	{ Width = BUFFER_WIDTH;   Height = BUFFER_HEIGHT;   Format = R16F;  MipLevels = 3+MXAO_MIPLEVEL_AO;};
+texture2D MXAO_NormalTex	{ Width = BUFFER_WIDTH;   Height = BUFFER_HEIGHT;   Format = RGBA8; MipLevels = 3+MXAO_MIPLEVEL_IL;};
+texture2D MXAO_CullingTex	{ Width = BUFFER_WIDTH/8; Height = BUFFER_HEIGHT/8; Format = R8; };
+
+sampler2D sMXAO_ColorTex	{ Texture = MXAO_ColorTex;	};
+sampler2D sMXAO_DepthTex	{ Texture = MXAO_DepthTex;	};
+sampler2D sMXAO_NormalTex	{ Texture = MXAO_NormalTex;	};
+sampler2D sMXAO_CullingTex	{ Texture = MXAO_CullingTex;	};
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Vertex Shader
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+struct MXAO_VSOUT
+{
+	float4              position    : SV_Position;
+        float2              texcoord    : TEXCOORD0;
+        float2              scaledcoord : TEXCOORD1;
+        float   	    samples     : TEXCOORD2;
+        float               blursamples : TEXCOORD3;
+        float3              uvtoviewADD : TEXCOORD4;
+        float3              uvtoviewMUL : TEXCOORD5;
+};
+
+MXAO_VSOUT VS_MXAO(in uint id : SV_VertexID)
+{
+        MXAO_VSOUT MXAO;
+
+        MXAO.texcoord.x = (id == 2) ? 2.0 : 0.0;
+        MXAO.texcoord.y = (id == 1) ? 2.0 : 0.0;
+        MXAO.scaledcoord.xy = MXAO.texcoord.xy / MXAO_GLOBAL_RENDER_SCALE;
+        MXAO.position = float4(MXAO.texcoord.xy * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
+
+        MXAO.samples   = 8;
+        MXAO.blursamples = 3;
+
+        int blurqualityTweak   = (MXAO_GLOBAL_RENDER_SCALE < 0.707) + MXAO_TWO_LAYER - MXAO_ENABLE_TSS;
+        int samplequalityTweak = -MXAO_GLOBAL_SAMPLE_QUALITY_PRESET * 2 * MXAO_ENABLE_TSS;
+
+        if(     MXAO_GLOBAL_SAMPLE_QUALITY_PRESET == 0) { MXAO.samples = 4   + samplequalityTweak; MXAO.blursamples = 3 + blurqualityTweak;}
+        else if(MXAO_GLOBAL_SAMPLE_QUALITY_PRESET == 1) { MXAO.samples = 8  + samplequalityTweak;  MXAO.blursamples = 3 + blurqualityTweak;}
+        else if(MXAO_GLOBAL_SAMPLE_QUALITY_PRESET == 2) { MXAO.samples = 16  + samplequalityTweak; MXAO.blursamples = 2 + blurqualityTweak;}
+        else if(MXAO_GLOBAL_SAMPLE_QUALITY_PRESET == 3) { MXAO.samples = 24  + samplequalityTweak; MXAO.blursamples = 2 + blurqualityTweak;}
+        else if(MXAO_GLOBAL_SAMPLE_QUALITY_PRESET == 4) { MXAO.samples = 32  + samplequalityTweak; MXAO.blursamples = 2 + blurqualityTweak;}
+        else if(MXAO_GLOBAL_SAMPLE_QUALITY_PRESET == 5) { MXAO.samples = 64  + samplequalityTweak; MXAO.blursamples = 1 + blurqualityTweak;}
+        else if(MXAO_GLOBAL_SAMPLE_QUALITY_PRESET == 6) { MXAO.samples = 255 + samplequalityTweak; MXAO.blursamples = 0 + blurqualityTweak;}
+
+        MXAO.blursamples = max(MXAO.blursamples,0);
+
+        MXAO.uvtoviewADD = float3(-1.0,-1.0,1.0);
+        MXAO.uvtoviewMUL = float3(2.0,2.0,0.0);
+/*
+        static const float FOV = 70.0;
+
+        MXAO.uvtoviewADD = float3(-tan(radians(FOV * 0.5)).xx,1.0);
+        MXAO.uvtoviewADD.y *= BUFFER_WIDTH * BUFFER_RCP_HEIGHT;
+        MXAO.uvtoviewMUL = float3(-2.0 * MXAO.uvtoviewADD.xy,0.0);
+*/
+        return MXAO;
+}
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Functions
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-/* Fetches linearized depth value. depth data ~ distance from camera
-   and 0 := camera, 1:= "infinite" distance, e.g. sky. */
 float GetLinearDepth(float2 coords)
 {
 	return ReShade::GetLinearizedDepth(coords);
 }
 
-/* Fetches position relative to camera. This is somewhat inaccurate
-   as it assumes FoV == 90 degrees but yields good enough results.
-   Axes are multiplied with far plane to better scale the occlusion
-   falloff and save instruction in AO main pass. Also using a bigger
-   data range seems to reduce precision artifacts for logarithmic
-   depth buffer option. */
-float3 GetPosition(float2 coords)
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+float3 GetPosition(in float2 coords, in MXAO_VSOUT MXAO)
 {
-	return float3(coords.xy*2.0-1.0,1.0)*GetLinearDepth(coords.xy)*RESHADE_DEPTH_LINEARIZATION_FAR_PLANE;
+        return (coords.xyx * MXAO.uvtoviewMUL + MXAO.uvtoviewADD) * GetLinearDepth(coords.xy) * RESHADE_DEPTH_LINEARIZATION_FAR_PLANE;
 }
 
-/* Same as above, except linearized and scaled data is already stored
-   in dedicated texture and we're sampling mipmaps here. */
-float3 GetPositionLOD(float2 coords, int mipLevel)
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+float3 GetPositionLOD(in float2 coords, in MXAO_VSOUT MXAO, in int mipLevel)
 {
-	return float3(coords.xy*2.0-1.0,1.0)*tex2Dlod(SamplerDistance, float4(coords.xy,0,mipLevel)).x;
+        return (coords.xyx * MXAO.uvtoviewMUL + MXAO.uvtoviewADD) * tex2Dlod(sMXAO_DepthTex, float4(coords.xy,0,mipLevel)).x;
 }
 
-/* Calculates normals based on partial depth buffer derivatives.
-   Does a similar job to ddx/ddy but this is higher quality and
-   it also takes care for object borders where usual ddx/ddy produce
-   inaccurate normals.*/
-float3 GetNormalFromDepth(float2 coords)
-{
-	float3 offs = float3(ReShade::PixelSize.xy,0);
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	float3 f 	 =       GetPosition(coords.xy);
-	float3 d_dx1 	 = - f + GetPosition(coords.xy + offs.xz);
-	float3 d_dx2 	 =   f - GetPosition(coords.xy - offs.xz);
-	float3 d_dy1 	 = - f + GetPosition(coords.xy + offs.zy);
-	float3 d_dy2 	 =   f - GetPosition(coords.xy - offs.zy);
-
-	d_dx1 = lerp(d_dx1, d_dx2, abs(d_dx1.z) > abs(d_dx2.z));
-	d_dy1 = lerp(d_dy1, d_dy2, abs(d_dy1.z) > abs(d_dy2.z));
-
-	return normalize(cross(d_dy1,d_dx1));
-}
-
-/* Box blur on normal map texture. Yes, it's as stupid as it sounds
-   but helps nicely to get rid of too obvious geometry lines in
-   landscape where a plain normal bias doesn't cut it. After all
-   we're doing approximations over approximations. */
-float3 GetSmoothedNormals(float2 texcoord, float3 ScreenSpaceNormals, float3 ScreenSpacePosition)
-{
-	float4 blurnormal = 0.0;
-	[loop]
-	for(float x = -3; x <= 3; x++)
-	{
-		[loop]
-		for(float y = -3; y <= 3; y++)
-		{
-			float2 offsetcoord 	= texcoord.xy + float2(x,y) * ReShade::PixelSize.xy * 3.5;
-			float3 samplenormal 	= normalize(tex2Dlod(SamplerSurfaceNormal,float4(offsetcoord,0,2)).xyz * 2.0 - 1.0);
-			float3 sampleposition	= GetPositionLOD(offsetcoord.xy,2);
-			float weight 		= saturate(1.0 - distance(ScreenSpacePosition.xyz,sampleposition.xyz)*1.2);
-			weight 		       *= smoothstep(0.5,1.0,dot(samplenormal,ScreenSpaceNormals));
-			blurnormal.xyz += samplenormal * weight;
-			blurnormal.w += weight;
-		}
-	}
-
-	return normalize(blurnormal.xyz / (0.0001 + blurnormal.w) + ScreenSpaceNormals*0.05);
-}
-
-/* Calculates weights for bilateral AO blur. Using only
-   depth is surely faster but it doesn't really cut it, also
-   areas with a flat angle to the camera will have high depth
-   differences, hence blur will cause stripes as seen in many
-   AO implementations, even HBAO+. Taking view angle into
-   account greatly helps to reduce these problems. */
 void GetBlurWeight(in float4 tempKey, in float4 centerKey, in float surfacealignment, inout float weight)
 {
         float depthdiff = abs(tempKey.w - centerKey.w);
         float normaldiff = saturate(1.0 - dot(tempKey.xyz,centerKey.xyz));
 
-        float biggestdiff = 1e-6 + fMXAOBlurSharpness * max(depthdiff*surfacealignment,normaldiff*2.0);
-        weight = saturate(0.2 / biggestdiff) * 2.0;
+        weight = saturate(0.15 / surfacealignment - depthdiff) * saturate(0.65 - normaldiff); 
+        weight = saturate(weight * 4.0) * 2.0;
 }
 
-/* Fetches normal,depth and AO/IL data from the respective buffers.
-   AO only: backbuffer rgb - normal, backbuffer alpha - AO.
-   IL enabled: backbuffer rgb - IL, backbuffer alpha - AO. */
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 void GetBlurKeyAndSample(in float2 texcoord, in float inputscale, in sampler inputsampler, inout float4 tempsample, inout float4 key)
 {
         float4 lodcoord = float4(texcoord.xy,0,0);
         tempsample = tex2Dlod(inputsampler,lodcoord * inputscale);
-        #if(MXAO_ENABLE_IL != 0)
-                key = float4(tex2Dlod(SamplerSurfaceNormal,lodcoord).xyz*2-1, tex2Dlod(SamplerDistance,lodcoord).x);
-        #else
-                key = float4(tempsample.xyz                             *2-1, tex2Dlod(SamplerDistance,lodcoord).x);
-        #endif
+        key = float4(tex2Dlod(sMXAO_NormalTex,lodcoord).xyz*2-1, tex2Dlod(sMXAO_DepthTex,lodcoord).x);
 }
 
-/* Bilateral blur, exploiting bilinear filter
-   for sample count reduction by sampling 2 texels
-   at once.*/
-float4 GetBlurredAO( float2 texcoord, sampler inputsampler, float2 axisscaled, int nSteps, float inputscale)
-{
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	float4 tempsample;
+float4 BlurFilter(in MXAO_VSOUT MXAO, in sampler inputsampler, float inputscale, float radius, int blursteps)
+{
+        float4 tempsample;
 	float4 centerkey, tempkey;
 	float  centerweight = 1.0, tempweight;
 	float4 blurcoord = 0.0;
 
-        GetBlurKeyAndSample(texcoord.xy,inputscale,inputsampler,tempsample,centerkey);
-	float surfacealignment = saturate(-dot(centerkey.xyz,normalize(float3(texcoord.xy*2.0-1.0,1.0)*centerkey.w)));
+        GetBlurKeyAndSample(MXAO.texcoord.xy,inputscale,inputsampler,tempsample,centerkey);
+	float surfacealignment = saturate(-dot(centerkey.xyz,normalize(float3(MXAO.texcoord.xy*2.0-1.0,1.0)*centerkey.w)));
+
+        #undef BLUR_COMP_SWIZZLE
 
         #if(MXAO_ENABLE_IL != 0)
-                float4 AO_IL    = tempsample;
+         #define BLUR_COMP_SWIZZLE xyzw
         #else
-                float AO        = tempsample.w;
+         #define BLUR_COMP_SWIZZLE w
         #endif
 
+        float4 blurSum = tempsample.BLUR_COMP_SWIZZLE;
+        float2 blurOffsets[8] = {float2(1.5,0.5),float2(-1.5,-0.5),float2(-0.5,1.5),float2(0.5,-1.5),float2(1.5,2.5),float2(-1.5,-2.5),float2(-2.5,1.5),float2(2.5,-1.5)};
+
         [loop]
-        for(int iStep = 1; iStep <= nSteps; iStep++)
+        for(int iStep = 0; iStep < blursteps; iStep++)
         {
-                float currentLinearstep = iStep * 2.0 - 0.5;
+                float2 sampleCoord = MXAO.texcoord.xy + blurOffsets[iStep] * ReShade::PixelSize * radius / inputscale; 
 
-                GetBlurKeyAndSample(texcoord.xy + currentLinearstep * axisscaled, inputscale, inputsampler, tempsample, tempkey);
+                GetBlurKeyAndSample(sampleCoord, inputscale, inputsampler, tempsample, tempkey);
                 GetBlurWeight(tempkey, centerkey, surfacealignment, tempweight);
 
-                #if(MXAO_ENABLE_IL != 0)
-                        AO_IL += tempsample * tempweight;
-                #else
-                        AO += tempsample.w * tempweight;
-                #endif
-                centerweight  += tempweight;
-
-                GetBlurKeyAndSample(texcoord.xy - currentLinearstep * axisscaled, inputscale, inputsampler, tempsample, tempkey);
-                GetBlurWeight(tempkey, centerkey, surfacealignment, tempweight);
-
-                #if(MXAO_ENABLE_IL != 0)
-                        AO_IL += tempsample * tempweight;
-                #else
-                        AO += tempsample.w * tempweight;
-                #endif
+                blurSum += tempsample.BLUR_COMP_SWIZZLE * tempweight;
                 centerweight  += tempweight;
         }
 
-        #if(MXAO_ENABLE_IL != 0)
-                return float4(AO_IL / centerweight);
-        #else
-                return float4(centerkey.xyz*0.5+0.5, AO / centerweight);
+        blurSum.BLUR_COMP_SWIZZLE /= centerweight;
+
+        #if(MXAO_ENABLE_IL == 0)
+                blurSum.xyz = centerkey.xyz*0.5+0.5;
+        #endif
+
+        return blurSum;
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+void SetupAOParameters(in MXAO_VSOUT MXAO, in float3 P, in float layerID, out float scaledRadius, out float falloffFactor)
+{
+        scaledRadius  = 0.25 * MXAO_SAMPLE_RADIUS / (MXAO.samples * (P.z + 2.0));
+        falloffFactor = -1.0/(MXAO_SAMPLE_RADIUS * MXAO_SAMPLE_RADIUS);
+
+        #if(MXAO_TWO_LAYER != 0)
+                scaledRadius  *= lerp(1.0,MXAO_SAMPLE_RADIUS_SECONDARY,layerID);
+                falloffFactor *= lerp(1.0,1.0/(MXAO_SAMPLE_RADIUS_SECONDARY*MXAO_SAMPLE_RADIUS_SECONDARY),layerID);
         #endif
 }
 
-/* Calculates the bayer dither pattern that's used to jitter
-   the direction of the AO samples per pixel.
-   Why this instead of precalculated texture? BECAUSE I CAN.
-   Using this ordered jitter instead of a pseudorandom one
-   has 3 advantages: it seems to be more cache-aware, the AO
-   is (given a fitting AO sample distribution pattern) a lot less
-   noisy (better variance, see Alchemy AO) and bilateral blur
-   needs a much smaller kernel: from my tests a blur kernel
-   of 5x5 is fine for most settings, but using a pseudorandom
-   distribution still has noticeable grain with 12x12++.
-   Smaller bayer matrix sizes have more obvious directional
-   AO artifacts but are easier to blur. */
-float GetBayerFromCoordLevel(float2 pixelpos, int maxLevel)
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+void TesselateNormals(inout float3 N, in float3 P, in MXAO_VSOUT MXAO)
 {
-	float finalBayer = 0.0;
+        float2 searchRadiusScaled = 0.018 / P.z * float2(1.0,ReShade::AspectRatio);
+        float3 likelyFace[4] = {N,N,N,N};
 
-	for(float i = 1-maxLevel; i<= 0; i++)
-	{
-		float bayerSize = exp2(i);
-	        float2 bayerCoord = floor(pixelpos * bayerSize) % 2.0;
-		float bayer = 2.0 * bayerCoord.x - 4.0 * bayerCoord.x * bayerCoord.y + 3.0 * bayerCoord.y;
-		finalBayer += exp2(2.0*(i+maxLevel))* bayer;
-	}
+        for(int iDirection=0; iDirection < 4; iDirection++)
+        {
+                float2 cdir;
+                sincos(6.28318548 * 0.25 * iDirection,cdir.y,cdir.x);
+                for(int i=1; i<=5; i++)
+                {
+                        float cSearchRadius = exp2(i);
+                        float2 cOffset = MXAO.scaledcoord.xy + cdir * cSearchRadius * searchRadiusScaled;
 
-	float finalDivisor = 4.0 * exp2(2.0 * maxLevel)- 4.0;
-	//raising all values by increment is false but in AO pass it makes sense. Can you see it?
-	return finalBayer/ finalDivisor + 1.0/exp2(2.0 * maxLevel);
+                        float3 cN = tex2Dlod(sMXAO_NormalTex,float4(cOffset,0,0)).xyz * 2.0 - 1.0;
+                        float3 cP = GetPositionLOD(cOffset.xy,MXAO,0);
+
+                        float3 cDelta = cP - P;
+                        float validWeightDistance = saturate(1.0 - dot(cDelta,cDelta) * 20.0 / cSearchRadius);
+                        float Angle = dot(N.xyz,cN.xyz);
+                        float validWeightAngle = smoothstep(0.3,0.98,Angle) * smoothstep(1.0,0.98,Angle); //only take normals into account that are NOT equal to the current normal.
+
+                        float validWeight = saturate(3.0 * validWeightDistance * validWeightAngle / cSearchRadius);
+
+                        likelyFace[iDirection] = lerp(likelyFace[iDirection],cN.xyz, validWeight);
+                }
+        }
+
+        N = normalize(likelyFace[0] + likelyFace[1] + likelyFace[2] + likelyFace[3]);
 }
 
-/* Main AO pass. The samples are taken in an outward spiral,
-   that way a simple rotation matrix is enough to compute
-   the sample locations. The rotation angle is fine-tuned,
-   it yields an optimal (optimal as in "I couldn't find a better one")
-   sample distribution. Vogel algorithm uses the golden angle,
-   and samples are more uniformly distributed over the disc but
-   AO quality suffers a lot of samples are lining up (having the
-   same sampling direction). Test it yourself: make angle depending
-   on texcoord.x and you'll see that AO quality is highly depending
-   on angle. Mara and McGuire solve this in their Alchemy AO approach
-   by providing a hand-selected rotation for each sample count,
-   however my angle seems to produce better results and doesn't require
-   declaring a huge constant array or any CPU side code. */
-float4 GetMXAO(float2 POS,
-               float2 UV,
-               float3 N,
-               float3 P,
-               float nSamples,
-               float radius,
-               float falloffFactor,
-               float sampleJitter)
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+float GetCullingMask(in MXAO_VSOUT MXAO)
 {
-	float4 AO_IL = 0.0;
-	float2 sampleUV, Dir;
-
-        #if(MXAO_TWO_LAYER != 0)
-                float enhanceDetails = (POS.x + POS.y) % 2;
-                radius *= lerp(1.0,fMXAOSampleRadiusSecondary,enhanceDetails);
-                falloffFactor *= lerp(1.0,1.0/(fMXAOSampleRadiusSecondary*fMXAOSampleRadiusSecondary),enhanceDetails);
-        #endif
-
-        sincos(6.28318548*sampleJitter, Dir.y, Dir.x);
-        Dir *= radius;
-
-	[loop]
-	for(int iSample=0; iSample < nSamples; iSample++)
-	{
-		Dir.xy = mul(Dir.xy, float2x2(0.575,0.81815,-0.81815,0.575));
-		sampleUV = UV.xy + Dir.xy * float2(1.0,ReShade::AspectRatio) * (iSample + sampleJitter);
-
-                float sampleMIP = saturate(radius * iSample * 20.0)*5.0;
-
-		float3 V 		= -P + GetPositionLOD(sampleUV, sampleMIP);
-                float  VdotV            = dot(V, V);
-                float  VdotN            = dot(V, N)*rsqrt(VdotV);
-
-		float fAO = saturate(1.0 + falloffFactor * VdotV)  * saturate(VdotN - fMXAONormalBias);
-
-		#if(MXAO_ENABLE_IL != 0)
-                        if( fAO > 0.1)
-                        {
-        			float3 fIL = tex2Dlod(SamplerColorBypass, float4(sampleUV,0,sampleMIP + MXAO_MIPLEVEL_IL)).xyz;
-        			#if(MXAO_ENABLE_BACKFACE != 0)
-        				float3 tN = tex2Dlod(SamplerSurfaceNormal, float4(sampleUV,0,sampleMIP + MXAO_MIPLEVEL_IL)).xyz * 2.0 - 1.0;
-        				fIL = fIL - fIL*saturate(dot(V,tN)*rsqrt(VdotV)*2.0);
-        			#endif
-                                AO_IL += float4(fIL*fAO,fAO - fAO * dot(fIL,0.333));
-                        }
-		#else
-			AO_IL.w += fAO;
-		#endif
-	}
-
-	AO_IL = saturate(AO_IL/((1.0-fMXAONormalBias)*nSamples));
-
-        #if(MXAO_TWO_LAYER != 0)
-                AO_IL = pow(AO_IL,1.0 / lerp(fMXAOMultFineCoarse.x,fMXAOMultFineCoarse.y,enhanceDetails));
-        #endif
-
-        return AO_IL;
+        float4 cOffsets = float4(ReShade::PixelSize.xy,-ReShade::PixelSize.xy) * 8;
+        float cullingArea = tex2D(sMXAO_CullingTex, MXAO.scaledcoord.xy + cOffsets.xy).x;
+        cullingArea      += tex2D(sMXAO_CullingTex, MXAO.scaledcoord.xy + cOffsets.zy).x;
+        cullingArea      += tex2D(sMXAO_CullingTex, MXAO.scaledcoord.xy + cOffsets.xw).x;
+        cullingArea      += tex2D(sMXAO_CullingTex, MXAO.scaledcoord.xy + cOffsets.zw).x;
+        return cullingArea  > 0.000001;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Pixel Shaders
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-/* Setup color, depth and normal data. Alpha channel of normal
-   texture provides the per pixel jitter for AO sampling. */
-void PS_InputBufferSetup(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0, out float4 depth : SV_Target1, out float4 normal : SV_Target2)
+void PS_InputBufferSetup(in MXAO_VSOUT MXAO, out float4 color : SV_Target0, out float4 depth : SV_Target1, out float4 normal : SV_Target2)
 {
-	color 		= tex2D(ReShade::BackBuffer, texcoord.xy);
-	depth 		= GetLinearDepth(texcoord.xy)*RESHADE_DEPTH_LINEARIZATION_FAR_PLANE;
-	normal.xyz 	= GetNormalFromDepth(texcoord.xy).xyz * 0.5 + 0.5;
-	normal.w	= 0; //GetBayerFromCoordLevel(vpos.xy,4);
+        float3 offs = float3(ReShade::PixelSize.xy,0);
+
+	float3 f 	 =       GetPosition(MXAO.texcoord.xy, MXAO);
+	float3 gradx1 	 = - f + GetPosition(MXAO.texcoord.xy + offs.xz, MXAO);
+	float3 gradx2 	 =   f - GetPosition(MXAO.texcoord.xy - offs.xz, MXAO);
+	float3 grady1 	 = - f + GetPosition(MXAO.texcoord.xy + offs.zy, MXAO);
+	float3 grady2 	 =   f - GetPosition(MXAO.texcoord.xy - offs.zy, MXAO);
+
+	gradx1 = lerp(gradx1, gradx2, abs(gradx1.z) > abs(gradx2.z));
+	grady1 = lerp(grady1, grady2, abs(grady1.z) > abs(grady2.z));
+
+	normal          = float4(normalize(cross(grady1,gradx1)) * 0.5 + 0.5,0.0);
+        color 		= tex2D(ReShade::BackBuffer, MXAO.texcoord.xy);
+	depth 		= GetLinearDepth(MXAO.texcoord.xy)*RESHADE_DEPTH_LINEARIZATION_FAR_PLANE;
 }
 
-/* Prepass to create stencil buffer that disables AO calculation for pixels
-   where AO is completely attenuated. Stencil can't be done for PS_AO_Pre
-   because the masked areas in the respective buffers are filled with 0
-   which then affects the mipmaps of those buffers and causes artifacts.*/
-void PS_StencilSetup(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
-{
-        texcoord.xy /= fMXAOSizeScale;
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	if(    GetLinearDepth(texcoord.xy) >= fMXAOFadeoutEnd
-            || 0.25 * fMXAOSampleRadius / (tex2D(SamplerDistance,texcoord.xy).x + 2.0) * BUFFER_HEIGHT < 1.0
-            || texcoord.x > 1.0
-            || texcoord.y > 1.0) discard;
+void PS_Culling(in MXAO_VSOUT MXAO, out float4 color : SV_Target0)
+{
+        color = 0.0;
+        MXAO.scaledcoord.xy = MXAO.texcoord.xy;
+        MXAO.samples = min(MXAO.samples, 32);
+
+	float3 P             = GetPositionLOD(MXAO.scaledcoord.xy, MXAO, 0);
+        float3 N             = tex2D(sMXAO_NormalTex, MXAO.scaledcoord.xy).xyz * 2.0 - 1.0;
+
+	P += N * P.z / RESHADE_DEPTH_LINEARIZATION_FAR_PLANE;
+
+        float scaledRadius;
+        float falloffFactor;
+        SetupAOParameters(MXAO, P, 0, scaledRadius, falloffFactor);
+
+        float randStep = dot(floor(MXAO.position.xy % 4 + 0.1),int2(1,4)) + 1;
+        randStep *= 0.0625;
+
+        float2 sampleUV, Dir;
+        sincos(38.39941 * randStep, Dir.x, Dir.y); 
+
+        Dir *= scaledRadius;       
+
+        [loop]
+        for(int iSample=0; iSample < MXAO.samples; iSample++)
+        {                
+                sampleUV = MXAO.scaledcoord.xy + Dir.xy * float2(1.0, ReShade::AspectRatio) * (iSample + randStep);   
+                Dir.xy = mul(Dir.xy, float2x2(0.76465,-0.64444,0.64444,0.76465));             
+
+                float sampleMIP = saturate(scaledRadius * iSample * 20.0) * 3.0;
+
+        	float3 V 		= -P + GetPositionLOD(sampleUV, MXAO, sampleMIP);
+                float  VdotV            = dot(V, V);
+                float  VdotN            = dot(V, N) * rsqrt(VdotV);
+
+                float fAO = saturate(1.0 + falloffFactor * VdotV) * saturate(VdotN - MXAO_SAMPLE_NORMAL_BIAS);
+		color.w += fAO;
+        }
+
+        color = color.w;
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+void PS_StencilSetup(in MXAO_VSOUT MXAO, out float4 color : SV_Target0)
+{
+        
+
+	if(    GetLinearDepth(MXAO.scaledcoord.xy) >= MXAO_FADE_DEPTH_END
+            || 0.25 * 0.5 * MXAO_SAMPLE_RADIUS / (tex2D(sMXAO_DepthTex,MXAO.scaledcoord.xy).x + 2.0) * BUFFER_HEIGHT < 1.0
+            || MXAO.scaledcoord.x > 1.0
+            || MXAO.scaledcoord.y > 1.0
+            || !GetCullingMask(MXAO)        
+            ) discard;
 
         color = 1.0;
 }
 
-void PS_AmbientObscurance(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 res : SV_Target0)
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+void PS_AmbientObscurance(in MXAO_VSOUT MXAO, out float4 color : SV_Target0)
 {
-        texcoord.xy /= fMXAOSizeScale;
+        color = 0.0;
 
-	float4 normalSample = tex2D(SamplerSurfaceNormal, texcoord.xy);
-        normalSample.w = GetBayerFromCoordLevel(floor(vpos.xy),4);
+	float3 P             = GetPositionLOD(MXAO.scaledcoord.xy, MXAO, 0);
+        float3 N             = tex2D(sMXAO_NormalTex, MXAO.scaledcoord.xy).xyz * 2.0 - 1.0;
+        float  layerID       = (MXAO.position.x + MXAO.position.y) % 2.0;
 
-	float3 ScreenSpaceNormals = normalSample.xyz * 2.0 - 1.0;
-	float3 ScreenSpacePosition = GetPositionLOD(texcoord.xy, 0);
-
-	[branch]
-	if(bMXAOSmoothNormalsEnable)
-	{
-		ScreenSpaceNormals = GetSmoothedNormals(texcoord, ScreenSpaceNormals, ScreenSpacePosition);
-	}
-
-	float scenedepth = ScreenSpacePosition.z / RESHADE_DEPTH_LINEARIZATION_FAR_PLANE;
-	ScreenSpacePosition += ScreenSpaceNormals * scenedepth;
-
-	float SampleRadiusScaled  = 0.25*fMXAOSampleRadius / (iMXAOSampleCount * (ScreenSpacePosition.z + 2.0));
-        static const float falloffFactor = -1.0/(fMXAOSampleRadius*fMXAOSampleRadius);
-
-	res = GetMXAO(vpos.xy,
-                      texcoord,
-		      ScreenSpaceNormals,
-		      ScreenSpacePosition,
-		      iMXAOSampleCount,
-		      SampleRadiusScaled,
-		      falloffFactor,
-		      normalSample.w);
-
-	res = sqrt(abs(res)); //AO denoise
-
-	#if(MXAO_ENABLE_IL == 0)
-		res.xyz = normalSample.xyz;
-	#endif
-}
-
-/* Box blur instead of gaussian seems to produce better
-   results for low kernel sizes. The offsets and weights
-   here make use of bilinear sampling, hence sampling
-   in 1.5 .. 3.5 ... 5.5 pixel offsets.*/
-void PS_BlurX(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 res : SV_Target0)
-{
-        res = GetBlurredAO(texcoord.xy, ReShade::BackBuffer, float2(ReShade::PixelSize.x,0.0), fMXAOBlurSteps, fMXAOSizeScale);
-}
-
-/* Second box blur pass and AO/IL combine. The given formula
-   yields to actual physical background or anything, it's just
-   a lot more visually pleasing than most formulas of similar
-   implementations.*/
-void PS_BlurYandCombine(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 res : SV_Target0)
-{
-        float4 MXAO = GetBlurredAO(texcoord.xy, ReShade::BackBuffer, float2(0.0,ReShade::PixelSize.y), fMXAOBlurSteps, 1.0);
-
-        #if(MXAO_ENABLE_IL == 0)
-                MXAO.rgb = 0;
+        #if(MXAO_SMOOTHNORMALS != 0)
+                TesselateNormals(N, P, MXAO);
         #endif
 
-        MXAO *= MXAO; //AO denoise
+	P += N * P.z / RESHADE_DEPTH_LINEARIZATION_FAR_PLANE;
 
-	float scenedepth = GetLinearDepth(texcoord.xy);
-	float4 color = tex2D(SamplerColorBypass, texcoord.xy);
+        float scaledRadius;
+        float falloffFactor;
+        SetupAOParameters(MXAO, P, layerID, scaledRadius, falloffFactor);
 
-	MXAO.xyz  = lerp(dot(MXAO.xyz,0.333),MXAO.xyz,fMXAOIndirectLightingSaturation) * fMXAOIndirectLightingAmount * 4;
-	MXAO.w    = 1-pow(1.0-MXAO.w, fMXAOAmbientOcclusionAmount*4.0);
+        float randStep = dot(floor(MXAO.position.xy % 4 + 0.1),int2(1,4)) + 1;
+        randStep *= 0.0625;
 
-	MXAO    = (bMXAODebugViewEnable) ? MXAO : lerp(MXAO, 0.0, pow(dot(color.rgb,0.333),2.0));
+        float2 sampleUV, Dir;
+        sincos(38.39941 * randStep, Dir.x, Dir.y); 
 
-        MXAO.w    = lerp(MXAO.w, 0.0,smoothstep(fMXAOFadeoutStart, fMXAOFadeoutEnd, scenedepth));
-	MXAO.xyz  = lerp(MXAO.xyz,0.0,smoothstep(fMXAOFadeoutStart*0.5, fMXAOFadeoutEnd*0.5, scenedepth));
+        Dir *= scaledRadius;       
 
-	float3 GI = max(0.0,1.0 - MXAO.www + MXAO.xyz);
-	color.rgb *= GI;
+        [loop]
+        for(int iSample=0; iSample < MXAO.samples; iSample++)
+        {                
+                sampleUV = MXAO.scaledcoord.xy + Dir.xy * float2(1.0, ReShade::AspectRatio) * (iSample + randStep);   
+                Dir.xy = mul(Dir.xy, float2x2(0.76465,-0.64444,0.64444,0.76465));             
 
-	if(bMXAODebugViewEnable) //can't move this into ternary as one is preprocessor def and the other is a uniform
+                float sampleMIP = saturate(scaledRadius * iSample * 20.0) * 3.0;
+
+        	float3 V 		= -P + GetPositionLOD(sampleUV, MXAO, sampleMIP);
+                float  VdotV            = dot(V, V);
+                float  VdotN            = dot(V, N) * rsqrt(VdotV);
+
+                float fAO = saturate(1.0 + falloffFactor * VdotV) * saturate(VdotN - MXAO_SAMPLE_NORMAL_BIAS);
+
+        	#if(MXAO_ENABLE_IL != 0)
+                        if(fAO > 0.1)
+                        {
+        			float3 fIL = tex2Dlod(sMXAO_ColorTex, float4(sampleUV,0,sampleMIP + MXAO_MIPLEVEL_IL)).xyz;
+        			float3 tN = tex2Dlod(sMXAO_NormalTex, float4(sampleUV,0,sampleMIP + MXAO_MIPLEVEL_IL)).xyz * 2.0 - 1.0;
+        			fIL = fIL - fIL*saturate(dot(V,tN)*rsqrt(VdotV)*2.0);
+                                color += float4(fIL*fAO,fAO - fAO * dot(fIL,0.333));
+                        }
+		#else
+			color.w += fAO;
+		#endif
+        }
+
+        color = saturate(color/((1.0-MXAO_SAMPLE_NORMAL_BIAS)*MXAO.samples));
+        color = sqrt(color); //AO denoise
+
+        #if(MXAO_TWO_LAYER != 0)
+                color = pow(color,1.0 / lerp(MXAO_AMOUNT_COARSE, MXAO_AMOUNT_FINE, layerID));
+        #endif
+
+        #if(MXAO_ENABLE_TSS != 0)
+                color = lerp(tex2D(SamplerSSAOTSS,MXAO.scaledcoord.xy),color,0.2);
+        #endif
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+void PS_BlurX(in MXAO_VSOUT MXAO, out float4 color : SV_Target0)
+{
+        color = BlurFilter(MXAO, ReShade::BackBuffer, MXAO_GLOBAL_RENDER_SCALE, 1.0, 8);
+}
+
+void PS_BlurYandCombine(MXAO_VSOUT MXAO, out float4 color : SV_Target0)
+{
+        #if(MXAO_ENABLE_TSS != 0)
+                float4 aoil = BlurFilter(MXAO, SamplerSSAOTSS, 1.0, 0.75/MXAO_GLOBAL_RENDER_SCALE, 4);
+        #else
+                float4 aoil = BlurFilter(MXAO, ReShade::BackBuffer, 1.0, 0.75/MXAO_GLOBAL_RENDER_SCALE, 4);
+        #endif
+
+        aoil *= aoil; //AO denoise
+	color                   = tex2D(sMXAO_ColorTex, MXAO.texcoord.xy);
+
+        float scenedepth        = GetLinearDepth(MXAO.texcoord.xy);
+        float3 lumcoeff         = float3(0.2126, 0.7152, 0.0722);
+        float colorgray         = dot(color.rgb,lumcoeff);
+        float blendfact         = 1.0 - colorgray;
+
+        #if(MXAO_ENABLE_IL != 0)
+	        aoil.xyz  = lerp(dot(aoil.xyz,lumcoeff),aoil.xyz, MXAO_SSIL_SATURATION) * MXAO_SSIL_AMOUNT * 4.0;
+        #else
+                aoil.xyz = 0.0;
+        #endif
+
+	aoil.w  = 1.0-pow(1.0-aoil.w, MXAO_SSAO_AMOUNT*4.0);
+        aoil    = lerp(aoil,0.0,smoothstep(MXAO_FADE_DEPTH_START, MXAO_FADE_DEPTH_END, scenedepth * float4(2.0,2.0,2.0,1.0)));
+
+        if(MXAO_BLEND_TYPE == 0)
+        {
+                color.rgb -= (aoil.www - aoil.xyz) * blendfact * color.rgb;
+        }
+        else if(MXAO_BLEND_TYPE == 1)
+        {
+                color.rgb = color.rgb * saturate(1.0 - aoil.www * blendfact * 1.2) + aoil.xyz * blendfact * colorgray * 2.0;
+        }
+        else if(MXAO_BLEND_TYPE == 2)
+        {
+                float colordiff = saturate(2.0 * distance(normalize(color.rgb + 1e-6),normalize(aoil.rgb + 1e-6)));
+                color.rgb = color.rgb + aoil.rgb * lerp(color.rgb, dot(color.rgb, 0.3333), colordiff) * blendfact * blendfact * 4.0;
+                color.rgb = color.rgb * (1.0 - aoil.www * (1.0 - dot(color.rgb, lumcoeff)));
+        }
+	else if(MXAO_BLEND_TYPE == 3)
+        {
+                color.rgb = pow(color.rgb,2.2);
+		color.rgb -= (aoil.www - aoil.xyz) * color.rgb;
+		color.rgb = pow(color.rgb,1.0/2.2);
+        }
+
+        color.rgb = saturate(color.rgb);
+
+	if(MXAO_DEBUG_VIEW_ENABLE == 1) //can't move this into ternary as one is preprocessor def and the other is a uniform
 	{
-		color.rgb = (MXAO_ENABLE_IL != 0) ? GI*0.5 : GI;
+                color.rgb = max(0.0,1.0 - aoil.www + aoil.xyz);
+                color.rgb *= (MXAO_ENABLE_IL != 0) ? 0.5 : 1.0;
 	}
+        else if(MXAO_DEBUG_VIEW_ENABLE == 2)
+        {
+                color.rgb = GetCullingMask(MXAO);
+        }
 
-	res = color;
+	color.a = 1.0;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -528,44 +584,53 @@ void PS_BlurYandCombine(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, o
 
 technique MXAO
 {
-	pass
+
+        pass
 	{
-		VertexShader = PostProcessVS;
+		VertexShader = VS_MXAO;
 		PixelShader  = PS_InputBufferSetup;
-		RenderTarget0 = texColorBypass;
-		RenderTarget1 = texDistance;
-		RenderTarget2 = texSurfaceNormal;
+		RenderTarget0 = MXAO_ColorTex;
+		RenderTarget1 = MXAO_DepthTex;
+		RenderTarget2 = MXAO_NormalTex;
+	}
+        pass
+	{
+		VertexShader = VS_MXAO;
+		PixelShader  = PS_Culling;
+		RenderTarget = MXAO_CullingTex;
 	}
         pass
         {
-                VertexShader = PostProcessVS;
+                VertexShader = VS_MXAO;
 		PixelShader  = PS_StencilSetup;
-		/*Render Target is Backbuffer*/
+                /*Render Target is Backbuffer*/
                 ClearRenderTargets = true;
 		StencilEnable = true;
 		StencilPass = REPLACE;
                 StencilRef = 1;
         }
-	pass
-	{
-		VertexShader = PostProcessVS;
-		PixelShader  = PS_AmbientObscurance;
-		/*Render Target is Backbuffer*/
-                ClearRenderTargets = true;
-		StencilEnable = true;
-		StencilPass = KEEP;
-		StencilFunc = EQUAL;
-                StencilRef = 1;
-	}
-	pass
-	{
-		VertexShader = PostProcessVS;
-		PixelShader  = PS_BlurX;
+        pass
+        {
+                VertexShader = VS_MXAO;
+                PixelShader  = PS_AmbientObscurance;
                 /*Render Target is Backbuffer*/
+                ClearRenderTargets = true;
+                StencilEnable = true;
+                StencilPass = KEEP;
+                StencilFunc = EQUAL;
+                StencilRef = 1;
+        }
+        pass
+	{
+		VertexShader = VS_MXAO;
+		PixelShader  = PS_BlurX;
+                #if(MXAO_ENABLE_TSS != 0)
+                        RenderTarget = texSSAOTSS;
+                #endif
 	}
 	pass
 	{
-		VertexShader = PostProcessVS;
+		VertexShader = VS_MXAO;
 		PixelShader  = PS_BlurYandCombine;
                 /*Render Target is Backbuffer*/
 	}
