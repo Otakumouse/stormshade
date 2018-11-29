@@ -7,7 +7,7 @@ To view a copy of this license, visit
 http://creativecommons.org/licenses/by-sa/4.0/.
 */
 
-// Perfect Perspective PS ver. 2.3.3
+// Perfect Perspective PS ver. 2.4.0
 
   ////////////////////
  /////// MENU ///////
@@ -15,52 +15,58 @@ http://creativecommons.org/licenses/by-sa/4.0/.
 
 #ifndef ShaderAnalyzer
 uniform int FOV <
-	ui_label = "Field of View";
-	ui_tooltip = "Match in-game Field of View";
-	ui_type = "drag";
-	ui_min = 45; ui_max = 120;
-	ui_category = "Distortion";
+	ui_label = "Corrected Field of View";
+	ui_tooltip = "This setting should match \n"
+		"your in-game Field of View";
+	ui_type = "slider";
+	ui_min = 45; ui_max = 120; ui_step = 0.2;
+	ui_category = "Distortion Correction";
 > = 90;
 
 uniform float Vertical <
-	ui_label = "Vertical Amount";
-	ui_tooltip = "0.0 - cylindrical projection \n"
-		"1.0 - spherical projection";
-	ui_type = "drag";
-	ui_min = 0.0; ui_max = 1.0;
-	ui_category = "Distortion";
-> = 0.618;
+	ui_label = "Vertical Curviness Amount";
+	ui_tooltip = "1  -  Spherical projection \n"
+		"0  -  Cylindrical projection";
+	ui_type = "slider";
+	ui_min = 0.0; ui_max = 1.0; ui_step = 0.1;
+	ui_category = "Distortion Correction";
+> = 0.5;
 
 uniform int Type <
-	ui_label = "Type of FOV";
-	ui_tooltip = "If the image bulges in movement (too high FOV), change it to 'Diagonal' \n"
-		"When proportions are distorted at the periphery (too low FOV), choose 'Vertical'";
+	ui_label = "Type of FOV (Field of View)";
+	ui_tooltip = "If the image bulges in movement (too high FOV), \n
+		"change it to 'Diagonal'.\n"
+		"When proportions are distorted at the periphery \n
+		"(too low FOV), choose 'Vertical'";
 	ui_type = "combo";
 	ui_items = "Horizontal FOV\0Diagonal FOV\0Vertical FOV\0";
-	ui_category = "Distortion";
+	ui_category = "Distortion Correction";
 > = 0;
 
+uniform float Zooming <
+	ui_label = "Borders Scale";
+	ui_tooltip = "Adjust image scale to see cropped areas";
+	ui_type = "slider";
+	ui_min = 0.0; ui_max = 3.0; ui_step = 0.001;
+	ui_category = "Borders Settings";
+> = 1.0;
+
 uniform float4 Color <
-	ui_label = "Color";
+	ui_label = "Color of Borders";
 	ui_tooltip = "Use Alpha to adjust opacity";
 	ui_type = "Color";
-	ui_category = "Borders";
-> = float4(0.027, 0.027, 0.027, 0.902);
+	ui_category = "Borders Settings";
+> = float4(0.027, 0.027, 0.027, 0.0);
 
 uniform bool Borders <
 	ui_label = "Mirrored Borders";
-	ui_category = "Borders";
+	ui_tooltip = "Choose between original or mirrored\n"
+		"image at the borders";
+	ui_category = "Borders Settings";
 > = true;
 
-uniform float Zooming <
-	ui_label = "Border Scale";
-	ui_type = "drag";
-	ui_min = 0.0; ui_max = 3.0; ui_step = 0.001;
-	ui_category = "Borders";
-> = 1.0;
-
 uniform bool Debug <
-	ui_label = "Display Resolution Map";
+	ui_label = "Display Resolution Scale Map";
 	ui_tooltip = "Color map of the Resolution Scale \n"
 		" Red    -  Undersampling \n"
 		" Green  -  Supersampling \n"
@@ -68,14 +74,18 @@ uniform bool Debug <
 	ui_category = "Debug Tools";
 > = false;
 
-uniform float ResScale <
-	ui_label = "DSR scale factor";
-	ui_tooltip = "(DSR) Dynamic Super Resolution... \n"
-		"Simulate application running beyond-native screen resolution";
-	ui_type = "drag";
-	ui_min = 1.0; ui_max = 8.0; ui_step = 0.02;
+uniform int2 ResScale <
+	ui_label = "D.S.R. Scale Factor";
+	ui_tooltip = "Dynamic Super Resolution (DSR), \n"
+		"simulates application running beyond\n"
+		"native screen resolution\n"
+		"\n"
+		"First Value - Native Screen Resolution\n"
+		"Second Value - D.S.R. Scaled Resolution";
+	ui_type = "slider";
+	ui_min = 16; ui_max = 16384; ui_step = 0.2;
 	ui_category = "Debug Tools";
-> = 1.0;
+> = int2(1920, 1920);
 #endif
 
   //////////////////////
@@ -167,7 +177,7 @@ float3 PerfectPerspectivePS(float4 vois : SV_Position, float2 texcoord : TexCoor
 		// Calculate Pixel Size difference...
 		float PixelScale = fwidth( length(RadialCoord.xy) );
 		// ...and simulate Dynamic Super Resolution (DSR) scalar
-		PixelScale /= ResScale * fwidth( length(RadialCoord.zw) );
+		PixelScale /= float(ResScale.y) / float(ResScale.x) * fwidth( length(RadialCoord.zw) );
 		PixelScale -= 1;
 
 		// Generate supersampled-undersampled color map
