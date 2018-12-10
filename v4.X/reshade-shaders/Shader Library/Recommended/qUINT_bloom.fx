@@ -1,6 +1,6 @@
 /*=============================================================================
 
-	ReShade 3 effect file
+	ReShade 4 effect file
     github.com/martymcmodding
 
 	Support me:
@@ -128,7 +128,11 @@ uniform float BLOOM_TONEMAP_COMPRESSION <
 
 #include "qUINT_common.fxh"
 
-static const int BloomTex7_LowestMip = int(log(BUFFER_HEIGHT/128) / log(2)) + 1;
+#define CONST_LOG2(v) (((v) & 0xAAAAAAAA) != 0) | ((((v) & 0xFFFF0000) != 0) << 4) | ((((v) & 0xFF00FF00) != 0) << 3) | ((((v) & 0xF0F0F0F0) != 0) << 2) | ((((v) & 0xCCCCCCCC) != 0) << 1)
+
+
+//static const int BloomTex7_LowestMip = int(log(BUFFER_HEIGHT/128) / log(2)) + 1;
+static const int BloomTex7_LowestMip = CONST_LOG2(BUFFER_HEIGHT/128);
 
 texture2D MXBLOOM_BloomTexSource 	{ Width = BUFFER_WIDTH/2; 	Height = BUFFER_HEIGHT/2;    Format = RGBA16F;};
 texture2D MXBLOOM_BloomTex1 		{ Width = BUFFER_WIDTH/2; 	Height = BUFFER_HEIGHT/2;    Format = RGBA16F;};
@@ -258,7 +262,7 @@ float3 Upsample(sampler2D tex, float2 texel_size, float2 uv)
 void PS_BloomPrepass(in float4 pos : SV_Position, in float2 uv : TEXCOORD0, out float4 color : SV_Target0)
 {
 	color = downsample(qUINT::sBackBufferTex, qUINT::SCREEN_SIZE, uv);
-	color.w = dot(color.rgb, 0.333);
+	color.w = saturate(dot(color.rgb, 0.333));
 
 	color.rgb = lerp(color.w, color.rgb, BLOOM_SAT);
 	color.rgb *= (pow(color.w, BLOOM_CURVE) * BLOOM_INTENSITY * BLOOM_INTENSITY * BLOOM_INTENSITY) / (color.w + 1e-3);
@@ -336,7 +340,7 @@ void PS_Combine(in float4 pos : SV_Position, in float2 uv : TEXCOORD0, out float
 	color.rgb *= lerp(1, rcp(adapt), BLOOM_ADAPT_STRENGTH); 
 	color.rgb = ldexp(color.rgb, BLOOM_ADAPT_EXPOSURE);
 
-	color.rgb = pow(color.rgb, BLOOM_TONEMAP_COMPRESSION);
+	color.rgb = pow(max(0,color.rgb), BLOOM_TONEMAP_COMPRESSION);
 	color.rgb = color.rgb / (1.0 + color.rgb);
 	color.rgb = pow(color.rgb, 1.0 / BLOOM_TONEMAP_COMPRESSION);
 }
@@ -346,6 +350,10 @@ void PS_Combine(in float4 pos : SV_Position, in float2 uv : TEXCOORD0, out float
 =============================================================================*/
 
 technique Bloom
+< ui_tooltip = "                >> qUINT::Bloom <<\n\n"
+			   "Bloom is a shader that produces a glow around bright\n"
+               "light sources and other emitters on screen.\n"
+               "\nBloom is written by Marty McFly / Pascal Gilcher"; >
 {
     pass
 	{
