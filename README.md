@@ -1,2 +1,2 @@
 # Installation Guide:
-http://stormshade.otakumouse.com/how-to-install/
+http://stormshade.otakumouse.com/installation-guide/
